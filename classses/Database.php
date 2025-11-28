@@ -1,25 +1,39 @@
 <?php
-// classes/Database.php - Database Configuration
-
 class Database {
-    private $host = "localhost";
-    private $db_name = "hospital_ticketing";
-    private $username = "root";
-    private $password = ""; // Ganti dengan password database Anda jika ada
-
+    // Properti database
     public $conn;
 
     public function getConnection() {
         $this->conn = null;
+
+        // Ambil kredensial dari Vercel Environment Variables
+        // Kalau kosong (lagi di localhost), pakai default setting localhost
+        $host = getenv('DB_HOST') ?: 'localhost';
+        $port = getenv('DB_PORT') ?: '3306'; 
+        $user = getenv('DB_USER') ?: 'root';
+        $pass = getenv('DB_PASS') ?: '';
+        $name = getenv('DB_NAME') ?: 'test'; // Default database name
+        $ssl  = getenv('DB_SSL') ?: 'false';
+
         try {
-            $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
-            $this->conn->exec("set names utf8");
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); // Set error mode to exception
+            // Opsi untuk SSL (TiDB Cloud wajib SSL di Vercel)
+            $options = [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            ];
+
+            if ($ssl === 'true') {
+                $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/pki/tls/certs/ca-bundle.crt';
+            }
+
+            $dsn = "mysql:host=" . $host . ";port=" . $port . ";dbname=" . $name;
+            
+            $this->conn = new PDO($dsn, $user, $pass, $options);
+            
         } catch(PDOException $exception) {
-            error_log("Connection error: " . $exception->getMessage()); // Log error
-            echo "Koneksi database gagal. Silakan coba lagi nanti."; // Friendly error message for user
-            exit(); // Terminate script execution
+            echo "Connection error: " . $exception->getMessage();
         }
+
         return $this->conn;
     }
 }
