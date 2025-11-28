@@ -1,13 +1,18 @@
 <?php
 // index.php - Main Application
 
+// 1. Optimasi Session untuk Vercel (PENTING!)
+// Mengatur durasi session cookie jadi 1 hari (86400 detik) biar user gak logout sendiri
+ini_set('session.cookie_lifetime', 86400);
+ini_set('session.gc_maxlifetime', 86400);
 session_start();
 
-// Include all necessary class files
-require_once 'classes/Database.php';
-require_once 'classes/User.php';
-require_once 'classes/Ticket.php';
-require_once 'classes/TicketResponse.php';
+// 2. Perbaikan Path Include (SOLUSI ERROR VERCEL)
+// Menggunakan __DIR__ memastikan Vercel mencari file di folder yang tepat
+require_once __DIR__ . '/classes/Database.php';
+require_once __DIR__ . '/classes/User.php';
+require_once __DIR__ . '/classes/Ticket.php';
+require_once __DIR__ . '/classes/TicketResponse.php';
 
 // Initialize database connection and objects
 $database = new Database();
