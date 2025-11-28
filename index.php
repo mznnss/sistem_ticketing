@@ -1,26 +1,25 @@
 <?php
 // index.php - Main Application
 
-// 1. Optimasi Session untuk Vercel (PENTING!)
-// Mengatur durasi session cookie jadi 1 hari (86400 detik) biar user gak logout sendiri
+// 1. Optimasi Session Serverless
 ini_set('session.cookie_lifetime', 86400);
 ini_set('session.gc_maxlifetime', 86400);
 session_start();
 
-// 2. Perbaikan Path Include (SOLUSI ERROR VERCEL)
-// Menggunakan __DIR__ memastikan Vercel mencari file di folder yang tepat
-require_once __DIR__ . '/classes/Database.php';
-require_once __DIR__ . '/classes/User.php';
-require_once __DIR__ . '/classes/Ticket.php';
-require_once __DIR__ . '/classes/TicketResponse.php';
+// 2. Load Class dari folder 'libs' (Folder Baru)
+// Menggunakan __DIR__ untuk path absolut (Anti Error Vercel)
+require_once __DIR__ . '/libs/Database.php';
+require_once __DIR__ . '/libs/User.php';
+require_once __DIR__ . '/libs/Ticket.php';
+require_once __DIR__ . '/libs/TicketResponse.php';
 
-// Initialize database connection and objects
+// Initialize database connection
 $database = new Database();
-$db = $database->getConnection(); // Establish database connection
+$db = $database->getConnection();
 
-$user = new User($db); // User object
-$ticket = new Ticket($db); // Ticket object
-$response = new TicketResponse($db); // TicketResponse object
+$user = new User($db);
+$ticket = new Ticket($db);
+$response = new TicketResponse($db);
 
 // Determine the action based on GET parameter, default to 'home'
 $action = isset($_GET['action']) ? $_GET['action'] : 'home';
@@ -693,3 +692,4 @@ switch($action) {
     </div>
 </body>
 </html>
+
