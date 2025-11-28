@@ -1,0 +1,18 @@
+{
+  "functions": {
+    "api/*.php": { "runtime": "vercel-php@0.6.0" },
+    "*.php": { "runtime": "vercel-php@0.6.0" }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.php"
+    }
+  ],
+  "env": {
+    "DB_HOST": "sql109.infinityfree.com",
+    "DB_USER": "if0_39358874",
+    "DB_PASS": "gDOHWyOkQ4KHge",
+    "DB_NAME": "if0_39358874_tiket"
+  }
+}
