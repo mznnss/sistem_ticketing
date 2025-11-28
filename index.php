@@ -7,7 +7,6 @@ ini_set('session.gc_maxlifetime', 86400);
 session_start();
 
 // 2. Load Class dari folder 'libs' (Folder Baru)
-// Menggunakan __DIR__ untuk path absolut (Anti Error Vercel)
 require_once __DIR__ . '/libs/Database.php';
 require_once __DIR__ . '/libs/User.php';
 require_once __DIR__ . '/libs/Ticket.php';
@@ -148,84 +147,84 @@ switch($action) {
         /* General Reset and Base Styles */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Inter', Arial, sans-serif; /* Using Inter for a modern look */
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Purple gradient */
+            font-family: 'Inter', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: flex-start; /* Align to top */
+            align-items: flex-start;
             padding: 20px 0;
-            color: #333; /* Default text color */
+            color: #333;
         }
         .container {
             max-width: 1200px;
             width: 100%;
             margin: 0 auto;
             padding: 20px;
-            animation: fadeIn 0.8s ease-out; /* Simple fade-in animation */
+            animation: fadeIn 0.8s ease-out;
         }
 
         /* Header Styling */
         .header {
-            background: rgba(255,255,255,0.15); /* Slightly less opaque */
-            backdrop-filter: blur(12px); /* Stronger blur effect */
-            -webkit-backdrop-filter: blur(12px); /* For Safari support */
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             padding: 25px;
-            border-radius: 20px; /* More rounded */
+            border-radius: 20px;
             margin-bottom: 30px;
             color: white;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); /* Deeper shadow */
-            border: 1px solid rgba(255,255,255,0.3); /* Subtle border */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
         }
         .header h1 {
-            font-size: 2.8em; /* Larger title */
+            font-size: 2.8em;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3); /* Text shadow for better readability */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         .header p {
-            font-size: 1.3em; /* Larger subtitle */
-            opacity: 0.95; /* More opaque */
+            font-size: 1.3em;
+            opacity: 0.95;
         }
 
         /* Navigation Styling */
         .nav {
             display: flex;
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            flex-wrap: wrap;
             gap: 15px;
             margin-top: 25px;
-            justify-content: center; /* Center align nav items */
+            justify-content: center;
         }
         .nav a, .btn {
-            background: rgba(255,255,255,0.25); /* Slightly more opaque for buttons */
+            background: rgba(255,255,255,0.25);
             color: white;
-            padding: 14px 28px; /* Larger padding */
+            padding: 14px 28px;
             text-decoration: none;
-            border-radius: 30px; /* More rounded */
+            border-radius: 30px;
             border: none;
             cursor: pointer;
-            transition: all 0.3s ease; /* Smooth transition */
+            transition: all 0.3s ease;
             font-weight: bold;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .nav a:hover, .btn:hover {
             background: rgba(255,255,255,0.4);
-            transform: translateY(-3px) scale(1.02); /* More pronounced hover effect */
+            transform: translateY(-3px) scale(1.02);
             box-shadow: 0 6px 15px rgba(0,0,0,0.2);
         }
 
         /* Card Styling */
         .card {
-            background: rgba(255,255,255,0.98); /* Almost opaque white */
+            background: rgba(255,255,255,0.98);
             padding: 35px;
-            border-radius: 20px; /* More rounded corners */
+            border-radius: 20px;
             margin-bottom: 25px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15); /* Deeper shadow for cards */
-            border: 1px solid rgba(0,0,0,0.05); /* Very light border */
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            border: 1px solid rgba(0,0,0,0.05);
         }
         .card h2 {
             font-size: 2em;
-            color: #4a5568; /* Darker grey heading */
+            color: #4a5568;
             margin-bottom: 25px;
             text-align: center;
         }
@@ -243,30 +242,30 @@ switch($action) {
         .form-group textarea,
         .form-group select {
             width: 100%;
-            padding: 14px; /* Larger padding for inputs */
-            border: 2px solid #cbd5e0; /* Lighter grey border */
-            border-radius: 10px; /* More rounded */
-            font-size: 1.05em; /* Slightly larger font */
-            background-color: #f7fafc; /* Light background */
+            padding: 14px;
+            border: 2px solid #cbd5e0;
+            border-radius: 10px;
+            font-size: 1.05em;
+            background-color: #f7fafc;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         .form-group input:focus,
         .form-group textarea:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #667eea; /* Highlight color on focus */
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3); /* Subtle glow on focus */
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
         }
-        textarea { resize: vertical; } /* Allow vertical resizing for textareas */
+        textarea { resize: vertical; }
 
         /* Ticket Item Styling */
         .ticket-item {
-            border: 1px solid #e2e8f0; /* Light grey border */
+            border: 1px solid #e2e8f0;
             padding: 25px;
             margin-bottom: 18px;
-            border-radius: 12px; /* More rounded */
-            background: #ffffff; /* Pure white background */
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Soft shadow */
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .ticket-item:hover {
@@ -282,7 +281,7 @@ switch($action) {
             color: #555;
             line-height: 1.6;
         }
-        .ticket-item > div:first-child { /* Flex for title and status */
+        .ticket-item > div:first-child {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -294,14 +293,14 @@ switch($action) {
             padding: 6px 18px;
             border-radius: 25px;
             color: white;
-            font-size: 0.85em; /* Slightly smaller */
+            font-size: 0.85em;
             font-weight: bold;
             letter-spacing: 0.5px;
             text-transform: uppercase;
         }
-        .status-open { background: #28a745; } /* Green */
-        .status-in-progress { background: #ffc107; color: #333; } /* Yellow-orange */
-        .status-closed { background: #dc3545; } /* Red */
+        .status-open { background: #28a745; }
+        .status-in-progress { background: #ffc107; color: #333; }
+        .status-closed { background: #dc3545; }
 
         .priority-high { color: #dc3545; font-weight: bold; }
         .priority-medium { color: #ffc107; font-weight: bold; }
@@ -309,11 +308,11 @@ switch($action) {
 
         /* Response Item Styling */
         .response-item {
-            background: #f0f4f7; /* Lighter grey-blue */
+            background: #f0f4f7;
             padding: 20px;
             margin: 15px 0;
             border-radius: 10px;
-            border-left: 5px solid #667eea; /* Highlight border */
+            border-left: 5px solid #667eea;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         .response-item strong {
@@ -346,53 +345,6 @@ switch($action) {
             border-radius: 8px;
             margin-bottom: 20px;
             border: 1px solid #c3e6cb;
-        }
-
-        /* Utility Styles */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        .stats {
-            display: flex;
-            flex-wrap: wrap; /* Allow wrapping */
-            justify-content: space-around;
-            background: rgba(255,255,255,0.15);
-            padding: 25px;
-            border-radius: 20px;
-            color: white;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        .stat-item {
-            text-align: center;
-            flex: 1 1 150px; /* Flexible item size */
-            padding: 10px;
-        }
-        .stat-number {
-            font-size: 2.5em; /* Larger numbers */
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-        }
-        .stat-label {
-            opacity: 0.9;
-            font-size: 1.1em;
-            margin-top: 5px;
-        }
-
-        /* Responsive Adjustments */
-        @media (max-width: 768px) {
-            .header h1 { font-size: 2em; }
-            .header p { font-size: 1em; }
-            .nav { flex-direction: column; align-items: stretch; } /* Stack nav items */
-            .nav a, .btn { padding: 12px 20px; }
-            .card { padding: 25px; border-radius: 15px; }
-            .card h2 { font-size: 1.7em; margin-bottom: 20px; }
-            .ticket-item { padding: 20px; border-radius: 10px; }
-            .stats { flex-direction: column; } /* Stack stats on small screens */
-            .stat-number { font-size: 2em; }
         }
 
         /* Animations */
@@ -692,4 +644,3 @@ switch($action) {
     </div>
 </body>
 </html>
-
