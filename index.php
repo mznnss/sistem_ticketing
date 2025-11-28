@@ -6,13 +6,13 @@ ini_set('session.cookie_lifetime', 86400);
 ini_set('session.gc_maxlifetime', 86400);
 session_start();
 
-// 2. Load Class dari folder 'libs'
+// 2. Load Class dari folder 'libs' (Sesuai folder baru kamu)
 require_once __DIR__ . '/libs/Database.php';
 require_once __DIR__ . '/libs/User.php';
 require_once __DIR__ . '/libs/Ticket.php';
 require_once __DIR__ . '/libs/TicketResponse.php';
 
-// Initialize database objects
+// Initialize database connection
 $database = new Database();
 $db = $database->getConnection();
 
@@ -20,9 +20,10 @@ $user = new User($db);
 $ticket = new Ticket($db);
 $response = new TicketResponse($db);
 
+// Determine the action based on GET parameter, default to 'home'
 $action = isset($_GET['action']) ? $_GET['action'] : 'home';
 
-// LOGIC PHP (TIDAK BERUBAH DARI SEBELUMNYA)
+// Handle different actions using a switch statement for routing
 switch($action) {
     case 'register':
         if($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -33,6 +34,7 @@ switch($action) {
             }
         }
         break;
+
     case 'login':
         if($_SERVER['REQUEST_METHOD'] == 'POST') {
             if($user->login($_POST['email'], $_POST['password'])) {
@@ -47,421 +49,645 @@ switch($action) {
             }
         }
         break;
+
     case 'logout':
         session_destroy();
         header("Location: ?action=home");
         exit();
         break;
+
     case 'create_ticket':
-        if(!isset($_SESSION['user_id'])) { header("Location: ?action=login"); exit(); }
+        if(!isset($_SESSION['user_id'])) {
+            header("Location: ?action=login");
+            exit();
+        }
+
         if($_SERVER['REQUEST_METHOD'] == 'POST') {
             $ticket_id = $ticket->create($_SESSION['user_id'], $_POST['judul'], $_POST['deskripsi'], $_POST['kategori'], $_POST['prioritas']);
-            if($ticket_id) { header("Location: ?action=view_ticket&id=" . $ticket_id); exit(); } 
-            else { $error = "Gagal membuat tiket!"; }
+            if($ticket_id) {
+                header("Location: ?action=view_ticket&id=" . $ticket_id);
+                exit();
+            } else {
+                $error = "Gagal membuat tiket!";
+            }
         }
         break;
+
     case 'add_response':
-        if(!isset($_SESSION['user_id'])) { header("Location: ?action=login"); exit(); }
+        if(!isset($_SESSION['user_id'])) {
+            header("Location: ?action=login");
+            exit();
+        }
+
         if($_SERVER['REQUEST_METHOD'] == 'POST') {
             if($response->create($_POST['ticket_id'], $_SESSION['user_id'], $_POST['response'])) {
-                header("Location: ?action=view_ticket&id=" . $_POST['ticket_id']); exit();
+                header("Location: ?action=view_ticket&id=" . $_POST['ticket_id']);
+                exit();
             }
         }
         break;
+
     case 'update_status':
-        if(!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') { header("Location: ?action=login"); exit(); }
+        if(!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') {
+            header("Location: ?action=login");
+            exit();
+        }
+
         if($_SERVER['REQUEST_METHOD'] == 'POST') {
             if($ticket->updateStatus($_POST['ticket_id'], $_POST['status'])) {
-                header("Location: ?action=view_ticket&id=" . $_POST['ticket_id']); exit();
+                header("Location: ?action=view_ticket&id=" . $_POST['ticket_id']);
+                exit();
             }
         }
         break;
+
     case 'dashboard':
-        if(!isset($_SESSION['user_id'])) { header("Location: ?action=login"); exit(); }
+        if(!isset($_SESSION['user_id'])) {
+            header("Location: ?action=login");
+            exit();
+        }
         $stmt = $ticket->getAll($_SESSION['user_id'], $_SESSION['user_role']);
         break;
+
     case 'view_ticket':
-        if(!isset($_SESSION['user_id'])) { header("Location: ?action=login"); exit(); }
+        if(!isset($_SESSION['user_id'])) {
+            header("Location: ?action=login");
+            exit();
+        }
+
         $ticket_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         $ticket_data = $ticket->getById($ticket_id);
-        if(!$ticket_data) { $ticket_not_found = true; break; }
-        if($_SESSION['user_role'] != 'admin' && $ticket_data['user_id'] != $_SESSION['user_id']) { $access_denied = true; break; }
+
+        if(!$ticket_data) {
+            $ticket_not_found = true;
+            break;
+        }
+
+        if($_SESSION['user_role'] != 'admin' && $ticket_data['user_id'] != $_SESSION['user_id']) {
+            $access_denied = true;
+            break;
+        }
+
         $responses = $response->getByTicketId($ticket_id);
         break;
+
+    case 'home':
+    default:
+        break;
 }
+
 ?>
 <!DOCTYPE html>
-<html lang="id" class="h-full bg-gray-50">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Ticketing - PT Cipta Hospital INA</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>PT Cipta Hospital INA - Sistem Ticketing</title>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
-</head>
-<body class="h-full flex flex-col">
+        /* General Reset and Base Styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', Arial, sans-serif; /* Using Inter for a modern look */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Purple gradient */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top */
+            padding: 20px 0;
+            color: #333; /* Default text color */
+        }
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            animation: fadeIn 0.8s ease-out; /* Simple fade-in animation */
+        }
 
-    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="?action=home" class="flex-shrink-0 flex items-center gap-2">
-                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">C</div>
-                        <span class="font-bold text-xl text-gray-800 tracking-tight">CiptaHelpdesk</span>
-                    </a>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <?php if(isset($_SESSION['user_id'])): ?>
-                        <a href="?action=dashboard" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">Dashboard</a>
-                        <a href="?action=create_ticket" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition shadow-sm">Buat Tiket</a>
-                        <a href="?action=logout" class="text-gray-500 hover:text-red-600 px-3 py-2 rounded-md text-sm font-medium transition">Logout</a>
-                    <?php else: ?>
-                        <a href="?action=login" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition">Masuk</a>
-                        <a href="?action=register" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition shadow-sm">Daftar</a>
-                    <?php endif; ?>
-                </div>
+        /* Header Styling */
+        .header {
+            background: rgba(255,255,255,0.15); /* Slightly less opaque */
+            backdrop-filter: blur(12px); /* Stronger blur effect */
+            -webkit-backdrop-filter: blur(12px); /* For Safari support */
+            padding: 25px;
+            border-radius: 20px; /* More rounded */
+            margin-bottom: 30px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); /* Deeper shadow */
+            border: 1px solid rgba(255,255,255,0.3); /* Subtle border */
+        }
+        .header h1 {
+            font-size: 2.8em; /* Larger title */
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3); /* Text shadow for better readability */
+        }
+        .header p {
+            font-size: 1.3em; /* Larger subtitle */
+            opacity: 0.95; /* More opaque */
+        }
+
+        /* Navigation Styling */
+        .nav {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            gap: 15px;
+            margin-top: 25px;
+            justify-content: center; /* Center align nav items */
+        }
+        .nav a, .btn {
+            background: rgba(255,255,255,0.25); /* Slightly more opaque for buttons */
+            color: white;
+            padding: 14px 28px; /* Larger padding */
+            text-decoration: none;
+            border-radius: 30px; /* More rounded */
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease; /* Smooth transition */
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .nav a:hover, .btn:hover {
+            background: rgba(255,255,255,0.4);
+            transform: translateY(-3px) scale(1.02); /* More pronounced hover effect */
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Card Styling */
+        .card {
+            background: rgba(255,255,255,0.98); /* Almost opaque white */
+            padding: 35px;
+            border-radius: 20px; /* More rounded corners */
+            margin-bottom: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15); /* Deeper shadow for cards */
+            border: 1px solid rgba(0,0,0,0.05); /* Very light border */
+        }
+        .card h2 {
+            font-size: 2em;
+            color: #4a5568; /* Darker grey heading */
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        /* Form Styling */
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #4a5568;
+            font-size: 1.1em;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 14px; /* Larger padding for inputs */
+            border: 2px solid #cbd5e0; /* Lighter grey border */
+            border-radius: 10px; /* More rounded */
+            font-size: 1.05em; /* Slightly larger font */
+            background-color: #f7fafc; /* Light background */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea; /* Highlight color on focus */
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3); /* Subtle glow on focus */
+        }
+        textarea { resize: vertical; } /* Allow vertical resizing for textareas */
+
+        /* Ticket Item Styling */
+        .ticket-item {
+            border: 1px solid #e2e8f0; /* Light grey border */
+            padding: 25px;
+            margin-bottom: 18px;
+            border-radius: 12px; /* More rounded */
+            background: #ffffff; /* Pure white background */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Soft shadow */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .ticket-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .ticket-item h4 {
+            font-size: 1.4em;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+        .ticket-item p {
+            color: #555;
+            line-height: 1.6;
+        }
+        .ticket-item > div:first-child { /* Flex for title and status */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        /* Status and Priority Styling */
+        .ticket-status {
+            padding: 6px 18px;
+            border-radius: 25px;
+            color: white;
+            font-size: 0.85em; /* Slightly smaller */
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .status-open { background: #28a745; } /* Green */
+        .status-in-progress { background: #ffc107; color: #333; } /* Yellow-orange */
+        .status-closed { background: #dc3545; } /* Red */
+
+        .priority-high { color: #dc3545; font-weight: bold; }
+        .priority-medium { color: #ffc107; font-weight: bold; }
+        .priority-low { color: #28a745; font-weight: bold; }
+
+        /* Response Item Styling */
+        .response-item {
+            background: #f0f4f7; /* Lighter grey-blue */
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 5px solid #667eea; /* Highlight border */
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .response-item strong {
+            color: #2d3748;
+            font-size: 1.1em;
+        }
+        .response-item span {
+            font-size: 0.9em;
+            color: #777;
+        }
+        .response-item p {
+            margin-top: 10px;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        /* Alert Messages (Error/Success) */
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+
+        /* Utility Styles */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .stats {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping */
+            justify-content: space-around;
+            background: rgba(255,255,255,0.15);
+            padding: 25px;
+            border-radius: 20px;
+            color: white;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .stat-item {
+            text-align: center;
+            flex: 1 1 150px; /* Flexible item size */
+            padding: 10px;
+        }
+        .stat-number {
+            font-size: 2.5em; /* Larger numbers */
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        .stat-label {
+            opacity: 0.9;
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .header p { font-size: 1em; }
+            .nav { flex-direction: column; align-items: stretch; } /* Stack nav items */
+            .nav a, .btn { padding: 12px 20px; }
+            .card { padding: 25px; border-radius: 15px; }
+            .card h2 { font-size: 1.7em; margin-bottom: 20px; }
+            .ticket-item { padding: 20px; border-radius: 10px; }
+            .stats { flex-direction: column; } /* Stack stats on small screens */
+            .stat-number { font-size: 2em; }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PT Cipta Hospital INA</h1>
+            <p>Layanan Dukungan Teknis Online</p>
+            <div class="nav">
+                <?php if(isset($_SESSION['user_id'])): ?>
+                    <a href="?action=dashboard">Dashboard</a>
+                    <a href="?action=create_ticket">Buat Tiket</a>
+                    <a href="?action=logout">Logout (<?php echo htmlspecialchars($_SESSION['user_nama']); ?>)</a>
+                <?php else: ?>
+                    <a href="?action=home">Home</a>
+                    <a href="?action=login">Login</a>
+                    <a href="?action=register">Daftar</a>
+                <?php endif; ?>
             </div>
         </div>
-    </nav>
 
-    <main class="flex-grow">
-        <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-            
-            <?php if(isset($error)): ?>
-                <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-sm">
-                    <div class="flex">
-                        <div class="flex-shrink-0"><span class="text-red-500 font-bold">!</span></div>
-                        <div class="ml-3"><p class="text-sm text-red-700"><?php echo htmlspecialchars($error); ?></p></div>
+        <?php
+        switch($action) {
+            case 'home':
+                ?>
+                <div class="card">
+                    <h2>Selamat Datang di Sistem Ticketing</h2>
+                    <p style="margin: 20px 0;">PT Cipta Hospital INA adalah perusahaan teknologi kesehatan yang berdedikasi untuk memberikan solusi digital terbaik bagi rumah sakit dan fasilitas kesehatan di Indonesia.</p>
+
+                    <p style="margin: 20px 0;">Sistem ticketing kami dirancang untuk memudahkan komunikasi antara klien dan tim support kami. Dengan sistem yang user-friendly dan responsif, kami berkomitmen memberikan pelayanan terbaik untuk menyelesaikan setiap permasalahan teknis yang Anda hadapi.</p>
+
+                    <h3>Fitur Utama:</h3>
+                    <ul style="margin: 20px 0; padding-left: 30px; list-style-type: disc; color: #555;">
+                        <li>Sistem tiket terintegrasi untuk tracking permasalahan</li>
+                        <li>Response time yang cepat dari tim support</li>
+                        <li>Kategori dan prioritas tiket yang jelas</li>
+                        <li>Riwayat komunikasi yang lengkap</li>
+                        <li>Dashboard monitoring untuk admin</li>
+                    </ul>
+
+                    <div style="margin-top: 30px; text-align: center;">
+                        <a href="?action=register" class="btn">Mulai Sekarang</a>
                     </div>
                 </div>
-            <?php endif; ?>
+                <?php
+                break;
 
-            <?php if(isset($success)): ?>
-                <div class="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
-                    <div class="flex">
-                        <div class="flex-shrink-0"><span class="text-green-500 font-bold">✓</span></div>
-                        <div class="ml-3"><p class="text-sm text-green-700"><?php echo htmlspecialchars($success); ?></p></div>
-                    </div>
+            case 'register':
+                ?>
+                <div class="card">
+                    <h2>Daftar Akun Baru</h2>
+                    <?php if(isset($error)): ?>
+                        <div class="error"><?php echo htmlspecialchars($error); ?></div>
+                    <?php endif; ?>
+                    <?php if(isset($success)): ?>
+                        <div class="success"><?php echo htmlspecialchars($success); ?></div>
+                    <?php endif; ?>
+
+                    <form method="POST">
+                        <div class="form-group">
+                            <label for="nama">Nama Lengkap:</label>
+                            <input type="text" id="nama" name="nama" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email_reg">Email:</label>
+                            <input type="email" id="email_reg" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password_reg">Password:</label>
+                            <input type="password" id="password_reg" name="password" required>
+                        </div>
+                        <button type="submit" class="btn">Daftar</button>
+                    </form>
                 </div>
-            <?php endif; ?>
+                <?php
+                break;
 
+            case 'login':
+                ?>
+                <div class="card">
+                    <h2>Login</h2>
+                    <?php if(isset($error)): ?>
+                        <div class="error"><?php echo htmlspecialchars($error); ?></div>
+                    <?php endif; ?>
 
-            <?php switch($action) { 
-                case 'home': ?>
-                    <div class="text-center py-16 lg:py-24">
-                        <h1 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                            <span class="block">Layanan Dukungan Teknis</span>
-                            <span class="block text-indigo-600">PT Cipta Hospital INA</span>
-                        </h1>
-                        <p class="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-                            Solusi digital terbaik untuk fasilitas kesehatan. Laporkan kendala teknis Anda, tim kami siap membantu 24/7 dengan respons cepat dan solusi tepat.
-                        </p>
-                        <div class="mt-10 flex justify-center gap-4">
-                            <a href="?action=register" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10 shadow-lg hover:shadow-xl transition">
-                                Mulai Sekarang
-                            </a>
-                            <a href="?action=login" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 md:py-4 md:text-lg md:px-10 transition">
-                                Masuk Akun
-                            </a>
+                    <form method="POST">
+                        <div class="form-group">
+                            <label for="email_login">Email:</label>
+                            <input type="email" id="email_login" name="email" required>
                         </div>
+                        <div class="form-group">
+                            <label for="password_login">Password:</label>
+                            <input type="password" id="password_login" name="password" required>
+                        </div>
+                        <button type="submit" class="btn">Login</button>
+                    </form>
+                </div>
+                <?php
+                break;
+
+            case 'dashboard':
+                ?>
+                <div class="card">
+                    <h2>Dashboard Tiket</h2>
+                    <p>Selamat datang, <?php echo htmlspecialchars($_SESSION['user_nama']); ?>!</p>
+
+                    <div style="margin: 20px 0; text-align: center;">
+                        <a href="?action=create_ticket" class="btn">Buat Tiket Baru</a>
                     </div>
-                <?php break; ?>
 
-                <?php case 'login': ?>
-                    <div class="min-h-[50vh] flex flex-col justify-center py-6 sm:px-6 lg:px-8">
-                        <div class="sm:mx-auto sm:w-full sm:max-w-md">
-                            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Masuk ke Akun Anda</h2>
-                        </div>
-                        <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                            <div class="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10 border border-gray-100">
-                                <form class="space-y-6" method="POST">
-                                    <div>
-                                        <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-                                        <div class="mt-1">
-                                            <input id="email" name="email" type="email" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                                        <div class="mt-1">
-                                            <input id="password" name="password" type="password" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                            Masuk
-                                        </button>
-                                    </div>
-                                </form>
-                                <div class="mt-6">
-                                    <div class="relative">
-                                        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-300"></div></div>
-                                        <div class="relative flex justify-center text-sm">
-                                            <span class="px-2 bg-white text-gray-500">Belum punya akun? <a href="?action=register" class="text-indigo-600 hover:text-indigo-500">Daftar</a></span>
-                                        </div>
-                                    </div>
+                    <h3>Daftar Tiket:</h3>
+                    <?php
+                    if ($stmt->rowCount() > 0) {
+                        while($row = $stmt->fetch(PDO::FETCH_ASSOC)):
+                            $status_class = strtolower(str_replace(' ', '-', $row['status']));
+                            $priority_class = strtolower($row['prioritas']);
+                            ?>
+                            <div class="ticket-item">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <h4><?php echo htmlspecialchars($row['judul']); ?></h4>
+                                    <span class="ticket-status status-<?php echo $status_class; ?>">
+                                        <?php echo htmlspecialchars($row['status']); ?>
+                                    </span>
+                                </div>
+
+                                <p><?php echo htmlspecialchars(substr($row['deskripsi'], 0, 150)) . (strlen($row['deskripsi']) > 150 ? '...' : ''); ?></p>
+
+                                <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 15px; font-size: 14px; color: #666;">
+                                    <span>Kategori: <?php echo htmlspecialchars($row['kategori']); ?></span>
+                                    <span class="priority-<?php echo $priority_class; ?>">
+                                        Prioritas: <?php echo htmlspecialchars($row['prioritas']); ?>
+                                    </span>
+                                    <span>Dibuat: <?php echo date('d/m/Y H:i', strtotime($row['created_at'])); ?></span>
+                                    <?php if($_SESSION['user_role'] == 'admin' && isset($row['user_nama'])): ?>
+                                        <span>User: <?php echo htmlspecialchars($row['user_nama']); ?></span>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div style="margin-top: 15px; text-align: right;">
+                                    <a href="?action=view_ticket&id=<?php echo htmlspecialchars($row['id']); ?>" class="btn">Lihat Detail</a>
                                 </div>
                             </div>
+                        <?php endwhile;
+                    } else {
+                        echo "<p>Belum ada tiket yang dibuat.</p>";
+                    }
+                    ?>
+                </div>
+                <?php
+                break;
+
+            case 'create_ticket':
+                ?>
+                <div class="card">
+                    <h2>Buat Tiket Baru</h2>
+                    <?php if(isset($error)): ?>
+                        <div class="error"><?php echo htmlspecialchars($error); ?></div>
+                    <?php endif; ?>
+
+                    <form method="POST">
+                        <div class="form-group">
+                            <label for="judul">Judul Tiket:</label>
+                            <input type="text" id="judul" name="judul" required>
                         </div>
+
+                        <div class="form-group">
+                            <label for="kategori">Kategori:</label>
+                            <select id="kategori" name="kategori" required>
+                                <option value="">Pilih Kategori</option>
+                                <option value="Technical Support">Technical Support</option>
+                                <option value="Bug Report">Bug Report</option>
+                                <option value="Feature Request">Feature Request</option>
+                                <option value="Account Issue">Account Issue</option>
+                                <option value="General Inquiry">General Inquiry</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="prioritas">Prioritas:</label>
+                            <select id="prioritas" name="prioritas" required>
+                                <option value="">Pilih Prioritas</option>
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deskripsi">Deskripsi:</label>
+                            <textarea id="deskripsi" name="deskripsi" rows="8" required placeholder="Jelaskan permasalahan Anda secara detail..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn">Buat Tiket</button>
+                    </form>
+                </div>
+                <?php
+                break;
+
+            case 'view_ticket':
+                if (isset($ticket_not_found) && $ticket_not_found) {
+                    echo "<div class='card error'><h2>Tiket tidak ditemukan!</h2><p>Tiket dengan ID ini mungkin tidak ada atau telah dihapus.</p></div>";
+                    break;
+                }
+                if (isset($access_denied) && $access_denied) {
+                    echo "<div class='card error'><h2>Akses Ditolak!</h2><p>Anda tidak memiliki izin untuk melihat tiket ini.</p></div>";
+                    break;
+                }
+
+                $status_class = strtolower(str_replace(' ', '-', $ticket_data['status']));
+                $priority_class = strtolower($ticket_data['prioritas']);
+                ?>
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2><?php echo htmlspecialchars($ticket_data['judul']); ?></h2>
+                        <span class="ticket-status status-<?php echo $status_class; ?>">
+                            <?php echo htmlspecialchars($ticket_data['status']); ?>
+                        </span>
                     </div>
-                <?php break; ?>
 
-                <?php case 'register': ?>
-                    <div class="min-h-[50vh] flex flex-col justify-center py-6 sm:px-6 lg:px-8">
-                        <div class="sm:mx-auto sm:w-full sm:max-w-md">
-                            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Daftar Akun Baru</h2>
-                        </div>
-                        <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                            <div class="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10 border border-gray-100">
-                                <form class="space-y-6" method="POST">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
-                                        <div class="mt-1"><input name="nama" type="text" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Email</label>
-                                        <div class="mt-1"><input name="email" type="email" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Password</label>
-                                        <div class="mt-1"><input name="password" type="password" required class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></div>
-                                    </div>
-                                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Daftar Sekarang</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                <?php break; ?>
-
-                <?php case 'dashboard': ?>
-                    <div class="space-y-6">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">Dashboard Tiket</h2>
-                            <a href="?action=create_ticket" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                                + Tiket Baru
-                            </a>
-                        </div>
-
-                        <?php if ($stmt->rowCount() > 0): ?>
-                            <div class="bg-white shadow overflow-hidden sm:rounded-md">
-                                <ul role="list" class="divide-y divide-gray-200">
-                                    <?php while($row = $stmt->fetch(PDO::FETCH_ASSOC)): 
-                                        $statusColor = match($row['status']) {
-                                            'Open' => 'bg-green-100 text-green-800',
-                                            'In Progress' => 'bg-yellow-100 text-yellow-800',
-                                            'Closed' => 'bg-gray-100 text-gray-800',
-                                            default => 'bg-gray-100 text-gray-800'
-                                        };
-                                        $priorityColor = match($row['prioritas']) {
-                                            'High' => 'text-red-600',
-                                            'Medium' => 'text-yellow-600',
-                                            'Low' => 'text-green-600',
-                                            default => 'text-gray-500'
-                                        };
-                                    ?>
-                                    <li>
-                                        <a href="?action=view_ticket&id=<?php echo $row['id']; ?>" class="block hover:bg-gray-50 transition duration-150 ease-in-out">
-                                            <div class="px-4 py-4 sm:px-6">
-                                                <div class="flex items-center justify-between">
-                                                    <p class="text-sm font-medium text-indigo-600 truncate"><?php echo htmlspecialchars($row['judul']); ?></p>
-                                                    <div class="ml-2 flex-shrink-0 flex">
-                                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <?php echo $statusColor; ?>">
-                                                            <?php echo htmlspecialchars($row['status']); ?>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div class="mt-2 sm:flex sm:justify-between">
-                                                    <div class="sm:flex">
-                                                        <p class="flex items-center text-sm text-gray-500 mr-6">
-                                                            <span class="font-medium mr-1">Kat:</span> <?php echo htmlspecialchars($row['kategori']); ?>
-                                                        </p>
-                                                        <p class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                                                            <span class="font-medium mr-1">Prioritas:</span> <span class="<?php echo $priorityColor; ?> font-bold"><?php echo htmlspecialchars($row['prioritas']); ?></span>
-                                                        </p>
-                                                    </div>
-                                                    <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                                                        <p>
-                                                            <?php echo date('d M Y, H:i', strtotime($row['created_at'])); ?>
-                                                            <?php if($_SESSION['user_role'] == 'admin'): ?>
-                                                                <span class="ml-2 text-gray-400">by <?php echo htmlspecialchars($row['user_nama']); ?></span>
-                                                            <?php endif; ?>
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    </li>
-                                    <?php endwhile; ?>
-                                </ul>
-                            </div>
-                        <?php else: ?>
-                            <div class="text-center py-12 bg-white rounded-lg shadow">
-                                <p class="text-gray-500">Belum ada tiket yang dibuat.</p>
-                            </div>
+                    <div style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; font-size: 14px; color: #666;">
+                        <span>ID: #<?php echo htmlspecialchars($ticket_data['id']); ?></span>
+                        <span>Kategori: <?php echo htmlspecialchars($ticket_data['kategori']); ?></span>
+                        <span class="priority-<?php echo $priority_class; ?>">
+                            Prioritas: <?php echo htmlspecialchars($ticket_data['prioritas']); ?>
+                        </span>
+                        <span>Dibuat: <?php echo date('d/m/Y H:i', strtotime($ticket_data['created_at'])); ?></span>
+                        <?php if(isset($ticket_data['user_nama'])): ?>
+                            <span>Oleh: <?php echo htmlspecialchars($ticket_data['user_nama']); ?></span>
                         <?php endif; ?>
                     </div>
-                <?php break; ?>
 
-                <?php case 'create_ticket': ?>
-                    <div class="max-w-2xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden border border-gray-100">
-                        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                            <h3 class="text-lg font-medium leading-6 text-gray-900">Form Tiket Baru</h3>
-                            <p class="mt-1 text-sm text-gray-500">Jelaskan permasalahan Anda secara detail.</p>
-                        </div>
-                        <div class="p-6">
-                            <form method="POST" class="space-y-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Judul Permasalahan</label>
-                                    <input type="text" name="judul" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                </div>
-                                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Kategori</label>
-                                        <select name="kategori" required class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                            <option value="">Pilih Kategori</option>
-                                            <option value="Technical Support">Technical Support</option>
-                                            <option value="Bug Report">Bug Report</option>
-                                            <option value="Feature Request">Feature Request</option>
-                                            <option value="Account Issue">Account Issue</option>
-                                            <option value="General Inquiry">General Inquiry</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Prioritas</label>
-                                        <select name="prioritas" required class="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                            <option value="Low">Low (Rendah)</option>
-                                            <option value="Medium">Medium (Sedang)</option>
-                                            <option value="High">High (Mendesak)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Deskripsi Lengkap</label>
-                                    <textarea name="deskripsi" rows="6" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Ceritakan detail kendala..."></textarea>
-                                </div>
-                                <div class="flex justify-end">
-                                    <a href="?action=dashboard" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none mr-3">Batal</a>
-                                    <button type="submit" class="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Kirim Tiket</button>
-                                </div>
+                    <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 30px; border: 1px solid #e0e0e0;">
+                        <h4>Deskripsi Tiket:</h4>
+                        <p style="margin-top: 15px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.7;"><?php echo htmlspecialchars($ticket_data['deskripsi']); ?></p>
+                    </div>
+
+                    <?php if($_SESSION['user_role'] == 'admin'): ?>
+                        <div style="margin-bottom: 30px; background: #e6e6fa; padding: 20px; border-radius: 10px; border: 1px solid #d0d0f0;">
+                            <h4>Update Status Tiket:</h4>
+                            <form method="POST" action="?action=update_status" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-top: 15px;">
+                                <input type="hidden" name="ticket_id" value="<?php echo htmlspecialchars($ticket_id); ?>">
+                                <select name="status" style="flex-grow: 1; min-width: 150px;">
+                                    <option value="Open" <?php echo $ticket_data['status'] == 'Open' ? 'selected' : ''; ?>>Open</option>
+                                    <option value="In Progress" <?php echo $ticket_data['status'] == 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
+                                    <option value="Closed" <?php echo $ticket_data['status'] == 'Closed' ? 'selected' : ''; ?>>Closed</option>
+                                </select>
+                                <button type="submit" class="btn" style="background: #4CAF50;">Update Status</button>
                             </form>
                         </div>
-                    </div>
-                <?php break; ?>
+                    <?php endif; ?>
 
-                <?php case 'view_ticket': 
-                    if (isset($ticket_not_found)) { echo "<div class='text-center text-red-600'>Tiket tidak ditemukan</div>"; break; }
-                    if (isset($access_denied)) { echo "<div class='text-center text-red-600'>Akses ditolak</div>"; break; }
-                    $statusColor = match($ticket_data['status']) {
-                        'Open' => 'bg-green-100 text-green-800',
-                        'In Progress' => 'bg-yellow-100 text-yellow-800',
-                        'Closed' => 'bg-gray-100 text-gray-800',
-                        default => 'bg-gray-100 text-gray-800'
-                    };
-                ?>
-                    <div class="bg-white shadow-xl rounded-lg overflow-hidden border border-gray-100">
-                        <div class="bg-gray-50 px-6 py-5 border-b border-gray-200 sm:flex sm:items-center sm:justify-between">
-                            <div>
-                                <h3 class="text-xl leading-6 font-bold text-gray-900 flex items-center gap-3">
-                                    #<?php echo $ticket_data['id']; ?> - <?php echo htmlspecialchars($ticket_data['judul']); ?>
-                                </h3>
-                                <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                                    Dibuat oleh <span class="font-medium text-gray-900"><?php echo htmlspecialchars($ticket_data['user_nama'] ?? 'User'); ?></span> pada <?php echo date('d M Y, H:i', strtotime($ticket_data['created_at'])); ?>
-                                </p>
-                            </div>
-                            <div class="mt-4 sm:mt-0 flex items-center gap-2">
-                                <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full <?php echo $statusColor; ?>">
-                                    <?php echo htmlspecialchars($ticket_data['status']); ?>
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="px-6 py-6 bg-white border-b border-gray-100">
-                            <div class="prose max-w-none text-gray-800">
-                                <p class="whitespace-pre-wrap leading-relaxed"><?php echo htmlspecialchars($ticket_data['deskripsi']); ?></p>
-                            </div>
-                            <div class="mt-6 flex gap-4 text-sm text-gray-500 bg-gray-50 p-3 rounded-md inline-block">
-                                <span>📂 Kategori: <strong><?php echo htmlspecialchars($ticket_data['kategori']); ?></strong></span>
-                                <span>⚡ Prioritas: <strong><?php echo htmlspecialchars($ticket_data['prioritas']); ?></strong></span>
-                            </div>
-                        </div>
-
-                        <?php if($_SESSION['user_role'] == 'admin'): ?>
-                            <div class="bg-indigo-50 px-6 py-4 border-b border-gray-200">
-                                <form method="POST" action="?action=update_status" class="flex items-center gap-3">
-                                    <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
-                                    <label class="text-sm font-medium text-indigo-900">Update Status:</label>
-                                    <select name="status" class="block w-40 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                                        <option value="Open" <?php echo $ticket_data['status'] == 'Open' ? 'selected' : ''; ?>>Open</option>
-                                        <option value="In Progress" <?php echo $ticket_data['status'] == 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
-                                        <option value="Closed" <?php echo $ticket_data['status'] == 'Closed' ? 'selected' : ''; ?>>Closed</option>
-                                    </select>
-                                    <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">Simpan</button>
-                                </form>
-                            </div>
-                        <?php endif; ?>
-
-                        <div class="px-6 py-6 bg-gray-50">
-                            <h4 class="text-lg font-medium text-gray-900 mb-6">Diskusi & Respon</h4>
-                            
-                            <div class="space-y-6">
-                                <?php if ($responses->rowCount() > 0): 
-                                    while($resp = $responses->fetch(PDO::FETCH_ASSOC)): 
-                                        $is_me = ($resp['user_id'] == $_SESSION['user_id']); // Asumsi ada user_id di query response
-                                        // Jika query response tidak ada user_id, kita pakai nama saja untuk styling
-                                        $isAdmin = ($resp['user_role'] ?? '') == 'admin'; // Perlu join table user untuk tau role
-                                ?>
-                                    <div class="flex <?php echo $isAdmin ? 'justify-start' : 'justify-end'; ?>">
-                                        <div class="max-w-3xl <?php echo $isAdmin ? 'bg-white border-gray-200' : 'bg-indigo-50 border-indigo-100'; ?> border rounded-xl p-4 shadow-sm">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <span class="font-bold text-sm text-gray-900"><?php echo htmlspecialchars($resp['user_nama']); ?></span>
-                                                <span class="text-xs text-gray-400"><?php echo date('d/m/Y H:i', strtotime($resp['created_at'])); ?></span>
-                                            </div>
-                                            <p class="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed"><?php echo htmlspecialchars($resp['response']); ?></p>
-                                        </div>
+                    <h4>Riwayat Komunikasi:</h4>
+                    <div style="margin: 20px 0;">
+                        <?php
+                        if ($responses->rowCount() > 0) {
+                            while($resp = $responses->fetch(PDO::FETCH_ASSOC)): ?>
+                                <div class="response-item">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <strong><?php echo htmlspecialchars($resp['user_nama']); ?></strong>
+                                        <span style="font-size: 12px; color: #666;">
+                                            <?php echo date('d/m/Y H:i', strtotime($resp['created_at'])); ?>
+                                        </span>
                                     </div>
-                                <?php endwhile; else: ?>
-                                    <p class="text-center text-gray-400 italic">Belum ada balasan.</p>
-                                <?php endif; ?>
-                            </div>
-
-                            <?php if($ticket_data['status'] != 'Closed'): ?>
-                                <div class="mt-8">
-                                    <form method="POST" action="?action=add_response" class="relative">
-                                        <input type="hidden" name="ticket_id" value="<?php echo $ticket_id; ?>">
-                                        <div class="border border-gray-300 rounded-lg shadow-sm overflow-hidden focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 bg-white">
-                                            <label for="response" class="sr-only">Tulis balasan...</label>
-                                            <textarea rows="3" name="response" id="response" class="block w-full py-3 px-4 border-0 resize-none focus:ring-0 sm:text-sm" placeholder="Tulis balasan Anda di sini..."></textarea>
-                                            <div class="py-2 px-3 bg-gray-50 flex justify-between items-center">
-                                                <div class="flex-shrink-0">
-                                                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                                        Kirim Balasan
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </form>
+                                    <p style="white-space: pre-wrap; word-wrap: break-word;"><?php echo htmlspecialchars($resp['response']); ?></p>
                                 </div>
-                            <?php else: ?>
-                                <div class="mt-6 p-4 bg-gray-200 rounded text-center text-gray-600 font-medium">
-                                    Tiket ini sudah ditutup. Tidak dapat mengirim balasan baru.
-                                </div>
-                            <?php endif; ?>
-                        </div>
+                            <?php endwhile;
+                        } else {
+                            echo "<p>Belum ada komunikasi untuk tiket ini.</p>";
+                        }
+                        ?>
                     </div>
-                <?php break; ?>
-            <?php } ?>
-        </div>
-    </main>
 
-    <footer class="bg-white border-t border-gray-200 mt-auto">
-        <div class="max-w-7xl mx-auto py-6 px-4 overflow-hidden sm:px-6 lg:px-8">
-            <p class="mt-1 text-center text-base text-gray-400">
-                &copy; <?php echo date('Y'); ?> PT Cipta Hospital INA. All rights reserved.
-            </p>
-        </div>
-    </footer>
+                    <?php if($ticket_data['status'] != 'Closed'): ?>
+                        <div style="background: #f0f8ff; padding: 20px; border-radius: 10px; border: 1px solid #e0f0ff;">
+                            <h4>Tambah Respon:</h4>
+                            <form method="POST" action="?action=add_response">
+                                <input type="hidden" name="ticket_id" value="<?php echo htmlspecialchars($ticket_id); ?>">
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <textarea name="response" rows="6" required placeholder="Tulis respon Anda..."></textarea>
+                                </div>
+                                <button type="submit" class="btn">Kirim Respon</button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php
+                break;
+        }
+        ?>
+    </div>
 </body>
 </html>
